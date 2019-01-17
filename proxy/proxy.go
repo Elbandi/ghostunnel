@@ -235,15 +235,34 @@ func (p *Proxy) fuse(client, backend net.Conn) {
 
 // Copy data between two connections
 func (p *Proxy) copyData(dst net.Conn, src net.Conn) {
-	defer dst.Close()
-	defer src.Close()
-
 	_, err := io.Copy(dst, src)
 
 	if err != nil && !isClosedConnectionError(err) {
 		// We don't log individual "read from closed connection" errors, because
 		// we already have a log statement showing that a pipe has been closed.
 		p.logConditional(LogConnectionErrors, "error during copy: %s", err)
+	}
+
+	switch srcConn := src.(type) {
+	case *net.TCPConn:
+		srcConn.SetLinger(0)
+		srcConn.CloseRead()
+	case *net.UnixConn:
+		srcConn.CloseRead()
+	default:
+		src.Close()
+	}
+
+	switch dstConn := dst.(type) {
+	case *net.TCPConn:
+		dstConn.SetLinger(0)
+		dstConn.CloseWrite()
+	case *tls.Conn:
+		dstConn.CloseWrite()
+	case *net.UnixConn:
+		dstConn.CloseWrite()
+	default:
+		dst.Close()
 	}
 }
 
