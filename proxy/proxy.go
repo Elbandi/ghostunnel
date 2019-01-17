@@ -50,6 +50,14 @@ const (
 	LogEverything = LogHandshakeErrors | LogConnectionErrors | LogConnections
 )
 
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		// TODO maybe different buffer size?
+		// benchmark pls
+		return make([]byte, 1<<16)
+	},
+}
+
 // Logger is used by this package to log messages
 type Logger interface {
 	Printf(format string, v ...interface{})
@@ -235,7 +243,10 @@ func (p *Proxy) fuse(client, backend net.Conn) {
 
 // Copy data between two connections
 func (p *Proxy) copyData(dst net.Conn, src net.Conn) {
-	_, err := io.Copy(dst, src)
+	buf := bufferPool.Get().([]byte)
+	defer bufferPool.Put(buf)
+
+	_, err := io.CopyBuffer(dst, src, buf)
 
 	if err != nil && !isClosedConnectionError(err) {
 		// We don't log individual "read from closed connection" errors, because
