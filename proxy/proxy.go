@@ -38,6 +38,13 @@ var (
 	connTimer      = metrics.GetOrRegisterTimer("conn.lifetime", metrics.DefaultRegistry)
 )
 
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		// TODO maybe different buffer size?
+		// benchmark pls
+		return make([]byte, 1<<16)
+	},
+}
 // Logger is used by this package to log messages
 type Logger interface {
 	Printf(format string, v ...interface{})
@@ -230,8 +237,10 @@ func (p *Proxy) fuse(client, backend net.Conn) {
 // Copy data between two connections
 func (p *Proxy) copyData(dst net.Conn, src net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
+	buf := bufferPool.Get().([]byte)
+	defer bufferPool.Put(buf)
 
-	_, err := io.Copy(dst, src)
+	_, err := io.CopyBuffer(dst, src, buf)
 
 	if err != nil {
 		p.Logger.Printf("error: %s", err)
