@@ -134,8 +134,8 @@ func buildConfig(enabledCipherSuites string, caBundlePath string) (*tls.Config, 
 
 		PreferServerCipherSuites: true,
 
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		MinVersion:   tls.VersionTLS12,
+		ClientAuth:   tls.NoClientCert,
+		MinVersion:   tls.VersionTLS10,
 		CipherSuites: suites,
 		CurvePreferences: []tls.CurveID{
 			// P-256/X25519 have an ASM implementation, others do not (at least on x86-64).
