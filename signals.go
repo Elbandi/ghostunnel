@@ -22,7 +22,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/square/ghostunnel/proxy"
+	"github.com/Elbandi/ghostunnel/proxy"
 )
 
 // isShutdownSignal checks if the received signal is a shutdown signal

@@ -24,7 +24,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/square/ghostunnel/certloader"
+	"github.com/Elbandi/ghostunnel/certloader"
 )
 
 var cipherSuites = map[string][]uint16{
