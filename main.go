@@ -37,6 +37,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/Elbandi/ghostunnel/auth"
 	"github.com/Elbandi/ghostunnel/certloader"
+	"github.com/Elbandi/ghostunnel/fdlimit"
 	"github.com/Elbandi/ghostunnel/proxy"
 	"github.com/Elbandi/ghostunnel/wildcard"
 	"github.com/square/go-sq-metrics"
@@ -110,6 +111,7 @@ var (
 	// Status & logging
 	statusAddress = app.Flag("status", "Enable serving /_status and /_metrics on given HOST:PORT (or unix:SOCKET).").PlaceHolder("ADDR").String()
 	enableProf    = app.Flag("enable-pprof", "Enable serving /debug/pprof endpoints alongside /_status (for profiling).").Bool()
+	fdLimit       = app.Flag("fdlimit", "Set the maximum number of open file descriptors (default: 0 - no set)").Default("0").Uint64()
 )
 
 func init() {
@@ -295,6 +297,13 @@ func run(args []string) error {
 	logger.SetPrefix(fmt.Sprintf("[%d] ", os.Getpid()))
 	logger.Printf("starting ghostunnel in %s mode", command)
 
+	if *fdLimit > 0 {
+		err = fdlimit.Raise(*fdLimit)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: unable to set fdlimit: %s\n", err)
+			return err
+		}
+	}
 	// Metrics
 	if *metricsGraphite != nil {
 		logger.Printf("metrics enabled; reporting metrics via TCP to %s", *metricsGraphite)
