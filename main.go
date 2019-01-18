@@ -32,6 +32,7 @@ import (
 
 	"github.com/ghostunnel/ghostunnel/auth"
 	"github.com/ghostunnel/ghostunnel/certloader"
+	"github.com/ghostunnel/ghostunnel/fdlimit"
 	"github.com/ghostunnel/ghostunnel/policy"
 	"github.com/ghostunnel/ghostunnel/proxy"
 	"github.com/ghostunnel/ghostunnel/socket"
@@ -135,6 +136,7 @@ var (
 	enableProf     = app.Flag("enable-pprof", "Enable serving /debug/pprof endpoints alongside /_status (for profiling).").Bool()
 	enableShutdown = app.Flag("enable-shutdown", "Enable serving a /_shutdown endpoint alongside /_status to allow terminating via HTTP.").Default("false").Bool()
 	quiet          = app.Flag("quiet", "Silence log messages (can be all, conns, conn-errs, handshake-errs; repeat flag for more than one)").Default("").Enums("", "all", "conns", "handshake-errs", "conn-errs")
+	fdLimit        = app.Flag("fdlimit", "Set the maximum number of open file descriptors (default: 0 - no set)").Default("0").Uint64()
 
 	// Man page /help
 	helpMan = app.Flag("help-custom-man", "Generate a man page.").Hidden().PreAction(generateManPage).Bool()
@@ -428,6 +430,15 @@ func run(args []string) error {
 
 	logger.SetPrefix(fmt.Sprintf("[%d] ", os.Getpid()))
 	logger.Printf("starting ghostunnel in %s mode", command)
+
+	// Open file limit
+	if *fdLimit > 0 {
+		err = fdlimit.Raise(*fdLimit)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: unable to set fdlimit: %s\n", err)
+			return err
+		}
+	}
 
 	// Landlock
 	if useLandlock != nil && *useLandlock {
